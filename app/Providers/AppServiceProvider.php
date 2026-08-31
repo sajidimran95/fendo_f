@@ -31,7 +31,7 @@ class AppServiceProvider extends ServiceProvider
 
         // Standard: 10 attempts/min per IP (register, resend-otp, etc.)
         RateLimiter::for('auth', function (Request $request) {
-            return Limit::perMinute(10)->by($request->ip())->response(function () {
+            return Limit::perMinute(30)->by($request->ip())->response(function () {
                 return response()->json([
                     'status'  => false,
                     'message' => 'Too many requests. Please slow down.',

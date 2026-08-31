@@ -21,21 +21,34 @@ class OtpService
             ->latest()
             ->first();
 
-        if ($latest && $latest->created_at->diffInSeconds(now()) < self::RESEND_SECONDS) {
-            $wait = self::RESEND_SECONDS - (int) $latest->created_at->diffInSeconds(now());
+        if ($latest && $latest->updated_at && $latest->updated_at->diffInSeconds(now()) < 8) {
+            $wait = 8 - (int) $latest->updated_at->diffInSeconds(now());
             throw ValidationException::withMessages([
                 'phone' => ["Please wait {$wait} seconds before requesting another code."],
             ]);
         }
 
-        $otp = Otp::create([
-            'phone' => $phone,
-            'code' => (string) random_int(100000, 999999),
-            'purpose' => $purpose,
-            'expires_at' => Carbon::now()->addMinutes(self::EXPIRE_MINUTES),
-        ]);
+        $code = (string) random_int(100000, 999999);
+        $expires = Carbon::now()->addMinutes(self::EXPIRE_MINUTES);
 
-        // SMS gateway can be wired here later. In local/dev the code is returned in the API.
+        if ($latest) {
+            $latest->update([
+                'code' => $code,
+                'expires_at' => $expires,
+                'attempts' => 0,
+            ]);
+
+            $otp = $latest->fresh();
+        } else {
+            $otp = Otp::create([
+                'phone' => $phone,
+                'code' => $code,
+                'purpose' => $purpose,
+                'expires_at' => $expires,
+            ]);
+        }
+
+        app(SmsSender::class)->sendOtp($phone, $code);
 
         return $otp;
     }

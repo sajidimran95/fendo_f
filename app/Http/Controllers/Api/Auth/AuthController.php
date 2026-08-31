@@ -40,15 +40,15 @@ class AuthController extends Controller
             return $this->error('No account found with this mobile number.', null, 422);
         }
 
-        $otp = $this->otp->send($phone);
+        $otp = $this->otp->send($phone, $data['purpose']);
 
         $payload = [
             'phone' => $phone,
             'expires_in' => OtpService::EXPIRE_MINUTES * 60,
-            'resend_in' => OtpService::RESEND_SECONDS,
+            'resend_in' => 8,
         ];
 
-        if (app()->environment(['local', 'development', 'testing'])) {
+        if (app()->environment(['local', 'development', 'testing']) || config('app.debug')) {
             $payload['otp'] = $otp->code;
         }
 
@@ -154,12 +154,13 @@ class AuthController extends Controller
             'phone' => ['required', 'string', 'min:7', 'max:20'],
             'country_code' => ['nullable', 'string', 'max:8'],
             'password' => ['required', 'string', Password::min(6)],
-            'id_token' => ['required', 'string'],
+            'id_token' => ['nullable', 'string'],
+            'otp' => ['nullable', 'digits:6'],
             'device_name' => ['nullable', 'string', 'max:80'],
         ]);
 
         $phone = Phone::normalize($data['phone'], $data['country_code'] ?? null);
-        $this->assertFirebasePhone($data['id_token'], $phone, $data['country_code'] ?? null);
+        $this->assertPhoneVerified($phone, $data['country_code'] ?? null, $data['id_token'] ?? null, $data['otp'] ?? null, 'register');
 
         if (User::where('phone', $phone)->exists()) {
             return $this->error('This mobile number is already registered.', null, 422);
@@ -233,11 +234,12 @@ class AuthController extends Controller
             'phone' => ['required', 'string'],
             'country_code' => ['nullable', 'string', 'max:8'],
             'password' => ['required', 'string', Password::min(6)],
-            'id_token' => ['required', 'string'],
+            'id_token' => ['nullable', 'string'],
+            'otp' => ['nullable', 'digits:6'],
         ]);
 
         $phone = Phone::normalize($data['phone'], $data['country_code'] ?? null);
-        $this->assertFirebasePhone($data['id_token'], $phone, $data['country_code'] ?? null);
+        $this->assertPhoneVerified($phone, $data['country_code'] ?? null, $data['id_token'] ?? null, $data['otp'] ?? null, 'reset');
 
         $user = User::where('phone', $phone)->first();
         if (! $user) {
@@ -254,6 +256,32 @@ class AuthController extends Controller
         ]);
 
         return $this->success(null, 'Password updated. You can sign in now.');
+    }
+
+    private function assertPhoneVerified(string $phone, ?string $countryCode, ?string $idToken, ?string $otp, string $purpose): void
+    {
+        $hasToken = is_string($idToken) && $idToken !== '';
+        $hasOtp = is_string($otp) && $otp !== '';
+
+        if (! $hasToken && ! $hasOtp) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'otp' => ['Enter the verification code sent to your phone.'],
+            ]);
+        }
+
+        if ($hasToken) {
+            try {
+                $this->assertFirebasePhone($idToken, $phone, $countryCode);
+
+                return;
+            } catch (\Throwable $e) {
+                if (! $hasOtp) {
+                    throw $e;
+                }
+            }
+        }
+
+        $this->otp->verify($phone, $otp, $purpose);
     }
 
     private function assertFirebasePhone(string $idToken, ?string $requestedPhone, ?string $countryCode): string
