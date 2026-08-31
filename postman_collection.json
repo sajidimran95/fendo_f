@@ -1,0 +1,296 @@
+{
+  "info": {
+    "name": "Fendo API v1",
+    "_postman_id": "fendo-api-v1",
+    "description": "Complete Fendo API v1 (76 endpoints). Base URL: {{BASE_URL}}\n\nFlow: Register → Verify OTP → TOKEN saved automatically → Create Group → Create Expense → Check Activity & Notifications.\n\nv1.0.1: Activity/notifications auto-populate on actions; debt simplification on group balances; auth/refresh requires Bearer token.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "BASE_URL", "value": "http://localhost/fendo/public/api/v1", "type": "string" },
+    { "key": "TOKEN",    "value": "",                                       "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "01. Auth",
+      "item": [
+        {
+          "name": "Register",
+          "event": [{ "listen": "test", "script": { "exec": ["var r = pm.response.json();", "if(r.data && r.data.otp){ pm.collectionVariables.set('OTP', r.data.otp); pm.collectionVariables.set('EMAIL', pm.request.body.raw ? JSON.parse(pm.request.body.raw).email : ''); }"], "type": "text/javascript" } }],
+          "request": {
+            "method": "POST", "url": "{{BASE_URL}}/auth/register",
+            "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Test User\",\n  \"email\": \"testuser@example.com\",\n  \"password\": \"Password1\",\n  \"password_confirmation\": \"Password1\"\n}" }
+          }
+        },
+        {
+          "name": "Verify OTP (get token)",
+          "event": [{ "listen": "test", "script": { "exec": ["var r = pm.response.json();", "if(r.data && r.data.access_token){ pm.collectionVariables.set('TOKEN', r.data.access_token); console.log('Token saved:', r.data.access_token); }"], "type": "text/javascript" } }],
+          "request": {
+            "method": "POST", "url": "{{BASE_URL}}/auth/verify-otp",
+            "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"testuser@example.com\",\n  \"otp\": \"{{OTP}}\",\n  \"purpose\": \"register\"\n}" }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [{ "listen": "test", "script": { "exec": ["var r = pm.response.json();", "if(r.data && r.data.access_token){ pm.collectionVariables.set('TOKEN', r.data.access_token); }"], "type": "text/javascript" } }],
+          "request": {
+            "method": "POST", "url": "{{BASE_URL}}/auth/login",
+            "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"testuser@example.com\",\n  \"password\": \"Password1\",\n  \"device_name\": \"Postman\"\n}" }
+          }
+        },
+        {
+          "name": "Get Current User (me)",
+          "request": {
+            "method": "GET", "url": "{{BASE_URL}}/auth/me",
+            "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }]
+          }
+        },
+        {
+          "name": "Forgot Password",
+          "event": [{ "listen": "test", "script": { "exec": ["var r = pm.response.json(); if(r.data && r.data.otp){ pm.collectionVariables.set('RESET_OTP', r.data.otp); }"], "type": "text/javascript" } }],
+          "request": {
+            "method": "POST", "url": "{{BASE_URL}}/auth/forgot-password",
+            "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"testuser@example.com\"\n}" }
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST", "url": "{{BASE_URL}}/auth/reset-password",
+            "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"testuser@example.com\",\n  \"otp\": \"{{RESET_OTP}}\",\n  \"password\": \"NewPass1\",\n  \"password_confirmation\": \"NewPass1\"\n}" }
+          }
+        },
+        {
+          "name": "Social Login (Google)",
+          "request": {
+            "method": "POST", "url": "{{BASE_URL}}/auth/social-login",
+            "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"provider\": \"google\",\n  \"provider_id\": \"google_uid_12345\",\n  \"email\": \"socialuser@gmail.com\",\n  \"name\": \"Social User\",\n  \"device_name\": \"Postman\"\n}" }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "event": [{ "listen": "test", "script": { "exec": ["var r = pm.response.json();", "if(r.data && r.data.access_token){ pm.collectionVariables.set('TOKEN', r.data.access_token); console.log('Token refreshed'); }"], "type": "text/javascript" } }],
+          "request": {
+            "method": "POST", "url": "{{BASE_URL}}/auth/refresh",
+            "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }]
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST", "url": "{{BASE_URL}}/auth/logout",
+            "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "02. User Profile",
+      "item": [
+        { "name": "Get Profile", "request": { "method": "GET", "url": "{{BASE_URL}}/user/profile", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }] } },
+        { "name": "Update Profile", "request": { "method": "PUT", "url": "{{BASE_URL}}/user/profile", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"name\": \"John Updated\",\n  \"timezone\": \"America/New_York\",\n  \"currency\": \"USD\",\n  \"venmo_handle\": \"@johndoe\"\n}" } } },
+        { "name": "Change Password", "request": { "method": "PUT", "url": "{{BASE_URL}}/user/password", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"current_password\": \"Password1\",\n  \"password\": \"NewPassword1\",\n  \"password_confirmation\": \"NewPassword1\"\n}" } } },
+        { "name": "Update FCM Token", "request": { "method": "PUT", "url": "{{BASE_URL}}/user/fcm-token", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"fcm_token\": \"fake_fcm_token_12345\"\n}" } } },
+        { "name": "List Sessions", "request": { "method": "GET", "url": "{{BASE_URL}}/user/sessions", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }] } },
+        { "name": "Get Notification Settings", "request": { "method": "GET", "url": "{{BASE_URL}}/user/notification-settings", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }] } },
+        { "name": "Update Notification Settings", "request": { "method": "PUT", "url": "{{BASE_URL}}/user/notification-settings", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"all_enabled\": true,\n  \"expense_added\": true,\n  \"settlement_received\": true,\n  \"bill_reminder\": true,\n  \"weekly_summary\": false\n}" } } }
+      ]
+    },
+    {
+      "name": "03. Groups",
+      "item": [
+        {
+          "name": "List My Groups",
+          "request": { "method": "GET", "url": "{{BASE_URL}}/groups", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }] }
+        },
+        {
+          "name": "Create Group",
+          "event": [{ "listen": "test", "script": { "exec": ["var r = pm.response.json(); if(r.data && r.data.id){ pm.collectionVariables.set('GROUP_ID', r.data.id); }"], "type": "text/javascript" } }],
+          "request": {
+            "method": "POST", "url": "{{BASE_URL}}/groups",
+            "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Bali Trip 2026\",\n  \"type\": \"vacation\",\n  \"currency\": \"USD\",\n  \"simplify_debts\": true\n}" }
+          }
+        },
+        { "name": "Get Group", "request": { "method": "GET", "url": "{{BASE_URL}}/groups/{{GROUP_ID}}", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }] } },
+        { "name": "Update Group", "request": { "method": "PUT", "url": "{{BASE_URL}}/groups/{{GROUP_ID}}", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"name\": \"Bali Trip 2026 Updated\"\n}" } } },
+        { "name": "Generate Invite Link", "event": [{ "listen": "test", "script": { "exec": ["var r = pm.response.json(); if(r.data && r.data.invite_token){ pm.collectionVariables.set('INVITE_TOKEN', r.data.invite_token); }"], "type": "text/javascript" } }], "request": { "method": "POST", "url": "{{BASE_URL}}/groups/{{GROUP_ID}}/invite-link", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }] } },
+        { "name": "List Members", "request": { "method": "GET", "url": "{{BASE_URL}}/groups/{{GROUP_ID}}/members", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }] } },
+        { "name": "Group Balances (simplified if simplify_debts=true)", "request": { "method": "GET", "url": "{{BASE_URL}}/groups/{{GROUP_ID}}/balances", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }] }, "description": "Returns balances array + simplified:true/false. When simplify_debts is enabled on the group, uses min-cash-flow algorithm." },
+        { "name": "Archive Group", "request": { "method": "POST", "url": "{{BASE_URL}}/groups/{{GROUP_ID}}/archive", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }] } },
+        { "name": "Unarchive Group", "request": { "method": "POST", "url": "{{BASE_URL}}/groups/{{GROUP_ID}}/unarchive", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }] } }
+      ]
+    },
+    {
+      "name": "04. Expenses",
+      "item": [
+        { "name": "List Expenses", "request": { "method": "GET", "url": "{{BASE_URL}}/expenses", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }] } },
+        {
+          "name": "Create Expense — Equal Split",
+          "event": [{ "listen": "test", "script": { "exec": ["var r = pm.response.json(); if(r.data && r.data.id){ pm.collectionVariables.set('EXPENSE_ID', r.data.id); }"], "type": "text/javascript" } }],
+          "request": {
+            "method": "POST", "url": "{{BASE_URL}}/expenses",
+            "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Dinner at Nobu\",\n  \"amount\": 120.00,\n  \"currency\": \"USD\",\n  \"expense_date\": \"2026-06-11\",\n  \"group_id\": {{GROUP_ID}},\n  \"split_method\": \"equal\",\n  \"payers\": [\n    { \"user_id\": 1, \"amount_paid\": 120.00 }\n  ],\n  \"participants\": [\n    { \"user_id\": 1 },\n    { \"user_id\": 2 }\n  ]\n}" }
+          }
+        },
+        {
+          "name": "Create Expense — Percentage Split",
+          "request": {
+            "method": "POST", "url": "{{BASE_URL}}/expenses",
+            "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Hotel Room\",\n  \"amount\": 300.00,\n  \"expense_date\": \"2026-06-11\",\n  \"group_id\": {{GROUP_ID}},\n  \"split_method\": \"percentage\",\n  \"payers\": [{ \"user_id\": 1, \"amount_paid\": 300.00 }],\n  \"participants\": [\n    { \"user_id\": 1, \"percentage\": 60 },\n    { \"user_id\": 2, \"percentage\": 40 }\n  ]\n}" }
+          }
+        },
+        {
+          "name": "Create Expense — Itemized",
+          "request": {
+            "method": "POST", "url": "{{BASE_URL}}/expenses",
+            "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Restaurant Bill\",\n  \"amount\": 100.00,\n  \"expense_date\": \"2026-06-11\",\n  \"group_id\": {{GROUP_ID}},\n  \"split_method\": \"itemized\",\n  \"payers\": [{ \"user_id\": 1, \"amount_paid\": 100.00 }],\n  \"participants\": [{ \"user_id\": 1 }, { \"user_id\": 2 }],\n  \"items\": [\n    { \"name\": \"Steak\", \"amount\": 45.00, \"assigned_to\": [1] },\n    { \"name\": \"Pasta\", \"amount\": 30.00, \"assigned_to\": [2] },\n    { \"name\": \"Wine\",  \"amount\": 25.00, \"assigned_to\": [1, 2] }\n  ]\n}" }
+          }
+        },
+        { "name": "Get Expense", "request": { "method": "GET", "url": "{{BASE_URL}}/expenses/{{EXPENSE_ID}}", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }] } },
+        { "name": "Update Expense", "request": { "method": "PUT", "url": "{{BASE_URL}}/expenses/{{EXPENSE_ID}}", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"title\": \"Dinner at Nobu (updated)\",\n  \"merchant_name\": \"Nobu Restaurant\"\n}" } } },
+        { "name": "Group Expenses", "request": { "method": "GET", "url": "{{BASE_URL}}/groups/{{GROUP_ID}}/expenses", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }] } },
+        { "name": "Delete Expense", "request": { "method": "DELETE", "url": "{{BASE_URL}}/expenses/{{EXPENSE_ID}}", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }] } }
+      ]
+    },
+    {
+      "name": "05. Balances",
+      "item": [
+        { "name": "My Overall Balances", "request": { "method": "GET", "url": "{{BASE_URL}}/balances", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }] } },
+        { "name": "Balance Breakdown (per person)", "request": { "method": "GET", "url": "{{BASE_URL}}/balances/breakdown", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }] } }
+      ]
+    },
+    {
+      "name": "06. Bills",
+      "item": [
+        { "name": "List Bills", "request": { "method": "GET", "url": "{{BASE_URL}}/bills", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }] } },
+        { "name": "List Bills (upcoming)", "request": { "method": "GET", "url": { "raw": "{{BASE_URL}}/bills?status=upcoming", "query": [{ "key": "status", "value": "upcoming" }] }, "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }] } },
+        {
+          "name": "Create Bill (one-time)",
+          "event": [{ "listen": "test", "script": { "exec": ["var r = pm.response.json(); if(r.data && r.data.id){ pm.collectionVariables.set('BILL_ID', r.data.id); }"], "type": "text/javascript" } }],
+          "request": {
+            "method": "POST", "url": "{{BASE_URL}}/bills",
+            "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Electricity Bill June\",\n  \"amount\": 90.00,\n  \"due_date\": \"2026-06-20\",\n  \"group_id\": {{GROUP_ID}},\n  \"reminder_days\": [1, 3, 7]\n}" }
+          }
+        },
+        {
+          "name": "Create Bill (recurring)",
+          "request": {
+            "method": "POST", "url": "{{BASE_URL}}/bills",
+            "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Netflix\",\n  \"amount\": 22.00,\n  \"due_date\": \"2026-06-20\",\n  \"bill_type\": \"recurring\",\n  \"frequency\": \"monthly\",\n  \"recurrence_end_date\": \"2026-12-31\"\n}" }
+          }
+        },
+        { "name": "Get Bill", "request": { "method": "GET", "url": "{{BASE_URL}}/bills/{{BILL_ID}}", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }] } },
+        { "name": "Mark Bill Paid", "request": { "method": "POST", "url": "{{BASE_URL}}/bills/{{BILL_ID}}/pay", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"payment_method\": \"bank_transfer\"\n}" } } },
+        { "name": "Partial Pay Bill", "request": { "method": "POST", "url": "{{BASE_URL}}/bills/{{BILL_ID}}/partial-pay", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"amount\": 30.00,\n  \"payment_method\": \"cash\"\n}" } } }
+      ]
+    },
+    {
+      "name": "07. Settlements",
+      "item": [
+        { "name": "List Settlements", "request": { "method": "GET", "url": "{{BASE_URL}}/settlements", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }] } },
+        {
+          "name": "Record Settlement (Settle Up)",
+          "event": [{ "listen": "test", "script": { "exec": ["var r = pm.response.json(); if(r.data && r.data.id){ pm.collectionVariables.set('SETTLEMENT_ID', r.data.id); }"], "type": "text/javascript" } }],
+          "request": {
+            "method": "POST", "url": "{{BASE_URL}}/settlements",
+            "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"payee_id\": 2,\n  \"group_id\": {{GROUP_ID}},\n  \"amount\": 45.00,\n  \"currency\": \"USD\",\n  \"payment_method\": \"venmo\",\n  \"notes\": \"Settling up for dinner\",\n  \"settlement_date\": \"2026-06-11\"\n}" }
+          }
+        },
+        { "name": "Get Settlement", "request": { "method": "GET", "url": "{{BASE_URL}}/settlements/{{SETTLEMENT_ID}}", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }] } },
+        { "name": "List Payment Requests", "request": { "method": "GET", "url": "{{BASE_URL}}/settlements/requests", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }] } },
+        {
+          "name": "Send Payment Request",
+          "event": [{ "listen": "test", "script": { "exec": ["var r = pm.response.json(); if(r.data && r.data.id){ pm.collectionVariables.set('REQUEST_ID', r.data.id); }"], "type": "text/javascript" } }],
+          "request": {
+            "method": "POST", "url": "{{BASE_URL}}/settlements/requests",
+            "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"debtor_id\": 2,\n  \"group_id\": {{GROUP_ID}},\n  \"amount\": 30.00,\n  \"message\": \"Please settle the hotel share!\"\n}" }
+          }
+        },
+        { "name": "Accept Payment Request", "request": { "method": "PUT", "url": "{{BASE_URL}}/settlements/requests/{{REQUEST_ID}}/accept", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"payment_method\": \"cashapp\"\n}" } } },
+        { "name": "Decline Payment Request", "request": { "method": "PUT", "url": "{{BASE_URL}}/settlements/requests/{{REQUEST_ID}}/decline", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }] } }
+      ]
+    },
+    {
+      "name": "08. Activity Feed",
+      "description": "Auto-populated when you create expenses, bills, settlements, or group events. Run Create Expense first, then check feeds.",
+      "item": [
+        { "name": "My Global Feed", "request": { "method": "GET", "url": "{{BASE_URL}}/activity", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }] } },
+        { "name": "Group Activity Feed", "request": { "method": "GET", "url": "{{BASE_URL}}/groups/{{GROUP_ID}}/activity", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }] } }
+      ]
+    },
+    {
+      "name": "09. Notifications",
+      "description": "Auto-created on expense/bill/settlement/group events. Respects user notification settings and per-group mute.",
+      "item": [
+        { "name": "List Notifications", "request": { "method": "GET", "url": "{{BASE_URL}}/notifications", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }] } },
+        { "name": "Unread Count (badge)", "request": { "method": "GET", "url": "{{BASE_URL}}/notifications/unread-count", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }] } },
+        { "name": "Mark All Read", "request": { "method": "POST", "url": "{{BASE_URL}}/notifications/read-all", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }] } }
+      ]
+    },
+    {
+      "name": "10. Reports",
+      "item": [
+        { "name": "Personal Report (this month)", "request": { "method": "GET", "url": { "raw": "{{BASE_URL}}/reports/personal?from=2026-06-01&to=2026-06-30", "query": [{ "key": "from", "value": "2026-06-01" }, { "key": "to", "value": "2026-06-30" }] }, "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }] } },
+        { "name": "Group Report", "request": { "method": "GET", "url": { "raw": "{{BASE_URL}}/reports/group/{{GROUP_ID}}?from=2026-06-01", "query": [{ "key": "from", "value": "2026-06-01" }] }, "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }] } },
+        { "name": "Export CSV", "request": { "method": "GET", "url": { "raw": "{{BASE_URL}}/reports/export?format=csv", "query": [{ "key": "format", "value": "csv" }] }, "header": [{ "key": "Accept", "value": "*/*" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }] } },
+        { "name": "Export JSON", "request": { "method": "GET", "url": { "raw": "{{BASE_URL}}/reports/export?format=json", "query": [{ "key": "format", "value": "json" }] }, "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }] } }
+      ]
+    },
+    {
+      "name": "11. Dashboard",
+      "item": [
+        { "name": "Dashboard Summary", "request": { "method": "GET", "url": "{{BASE_URL}}/dashboard", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }] } }
+      ]
+    },
+    {
+      "name": "Categories",
+      "item": [
+        { "name": "List Categories", "request": { "method": "GET", "url": "{{BASE_URL}}/categories", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }] } },
+        {
+          "name": "Create Custom Category",
+          "event": [{ "listen": "test", "script": { "exec": ["var r = pm.response.json(); if(r.data && r.data.id){ pm.collectionVariables.set('CATEGORY_ID', r.data.id); }"], "type": "text/javascript" } }],
+          "request": { "method": "POST", "url": "{{BASE_URL}}/categories", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"name\": \"Pet Care\",\n  \"icon\": \"paw-print\",\n  \"color\": \"#a855f7\"\n}" } }
+        },
+        { "name": "Update Custom Category", "request": { "method": "PUT", "url": "{{BASE_URL}}/categories/{{CATEGORY_ID}}", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"name\": \"Pet Expenses\",\n  \"color\": \"#7c3aed\"\n}" } } },
+        { "name": "Delete Custom Category", "request": { "method": "DELETE", "url": "{{BASE_URL}}/categories/{{CATEGORY_ID}}", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }] } }
+      ]
+    },
+    {
+      "name": "User Search",
+      "item": [
+        { "name": "Search Users by Name or Email", "request": { "method": "GET", "url": { "raw": "{{BASE_URL}}/users/search?q=john", "query": [{ "key": "q", "value": "john" }] }, "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }] } },
+        { "name": "Search Users (exclude group members)", "request": { "method": "GET", "url": { "raw": "{{BASE_URL}}/users/search?q=john&exclude_group_id={{GROUP_ID}}", "query": [{ "key": "q", "value": "john" }, { "key": "exclude_group_id", "value": "{{GROUP_ID}}" }] }, "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }] } }
+      ]
+    },
+    {
+      "name": "Payment Deep Links",
+      "item": [
+        { "name": "Generate Payment Deep Links (Venmo/PayPal/CashApp/Zelle)", "request": { "method": "GET", "url": { "raw": "{{BASE_URL}}/settlements/deeplink?payee_id=2&amount=45.00&note=Settling%20dinner", "query": [{ "key": "payee_id", "value": "2" }, { "key": "amount", "value": "45.00" }, { "key": "note", "value": "Settling dinner" }] }, "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }] } }
+      ]
+    },
+    {
+      "name": "Group — Photo & Mute",
+      "item": [
+        {
+          "name": "Upload Group Cover Photo",
+          "request": { "method": "POST", "url": "{{BASE_URL}}/groups/{{GROUP_ID}}/photo", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }], "body": { "mode": "formdata", "formdata": [{ "key": "photo", "type": "file", "src": [] }] } }
+        },
+        { "name": "Mute Group Notifications", "request": { "method": "PUT", "url": "{{BASE_URL}}/groups/{{GROUP_ID}}/mute-notifications", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"muted\": true\n}" } } },
+        { "name": "Unmute Group Notifications", "request": { "method": "PUT", "url": "{{BASE_URL}}/groups/{{GROUP_ID}}/mute-notifications", "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{TOKEN}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"muted\": false\n}" } } }
+      ]
+    }
+  ]
+}
