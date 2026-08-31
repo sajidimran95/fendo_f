@@ -7,6 +7,7 @@ use App\Services\AvatarService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 
 class ProfileController extends Controller
 {
@@ -24,16 +25,27 @@ class ProfileController extends Controller
         $user = $request->user();
 
         $data = $request->validate([
+            'name' => ['sometimes', 'required', 'string', 'max:80'],
             'first_name' => ['sometimes', 'required', 'string', 'max:50'],
             'last_name' => ['nullable', 'string', 'max:50'],
+            'email' => ['nullable', 'email', 'max:120', Rule::unique('users', 'email')->ignore($user->id)],
+            'password' => ['nullable', 'string', Password::min(6)],
             'gender' => ['sometimes', Rule::in(['male', 'female', 'other'])],
             'notifications_enabled' => ['sometimes', 'boolean'],
         ]);
 
-        if (isset($data['first_name']) || array_key_exists('last_name', $data)) {
+        if (! empty($data['name'])) {
+            $parts = preg_split('/\s+/', trim($data['name']), 2) ?: [];
+            $data['first_name'] = $parts[0] ?? trim($data['name']);
+            $data['last_name'] = $parts[1] ?? null;
+        } elseif (isset($data['first_name']) || array_key_exists('last_name', $data)) {
             $first = $data['first_name'] ?? $user->first_name;
             $last = array_key_exists('last_name', $data) ? $data['last_name'] : $user->last_name;
             $data['name'] = trim($first.' '.$last);
+        }
+
+        if (empty($data['password'])) {
+            unset($data['password']);
         }
 
         $user->update($data);

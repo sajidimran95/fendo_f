@@ -21,8 +21,16 @@ class Phone
         }
 
         $code = $countryCode ? preg_replace('/\D+/', '', $countryCode) : '';
-        if ($code !== '' && ! str_starts_with($digits, $code)) {
-            $digits = $code.$digits;
+        if ($code !== '') {
+            $local = $digits;
+            if (str_starts_with($local, '0')) {
+                $local = substr($local, 1);
+            }
+            if ($code !== '' && ! str_starts_with($local, $code)) {
+                $digits = $code.$local;
+            } else {
+                $digits = $local;
+            }
         }
 
         return '+'.$digits;

@@ -17,9 +17,30 @@ Success shape:
 
 ---
 
-## Auth (phone OTP)
+## Auth
 
-### Send OTP
+### Register
+`POST /auth/register`  
+Body: `{ "name": "...", "email": "optional@mail.com", "phone": "01712345678", "country_code": "+880", "password": "secret12", "id_token": "<firebase idToken after SMS>" }`  
+SMS OTP is required once at register. After that, sign in with phone + password only.
+
+### Login
+`POST /auth/login`  
+Body: `{ "phone": "01712345678", "country_code": "+880", "password": "secret12" }`  
+No OTP.
+
+### Forgot password
+`POST /auth/send-otp` `{ "phone": "...", "country_code": "+880", "purpose": "register"|"reset" }`  
+Then Firebase SMS. Then:  
+`POST /auth/reset-password` `{ "phone": "...", "country_code": "+880", "password": "newpass", "id_token": "<firebase idToken>" }`
+
+### Firebase phone OTP
+`POST /auth/firebase`  
+After the Flutter app verifies SMS with Firebase Auth, send:  
+`{ "id_token": "<firebase idToken>", "phone": "01712345678", "country_code": "+880" }`  
+Returns the same `user` + `access_token` as verify-otp.
+
+### Send OTP (server fallback)
 `POST /auth/send-otp`  
 Body: `{ "phone": "9296876662", "country_code": "+1" }`  
 Local response includes `otp`.
@@ -101,7 +122,7 @@ Empty list → show “Transactions history is empty”.
 `POST /notifications/read-all` **Auth**
 
 `GET /profile` **Auth**  
-`PUT /profile` **Auth** `{ "first_name", "last_name", "gender", "notifications_enabled" }`  
+`PUT /profile` **Auth** `{ "name", "email", "password?" }` — password only if changing. Email optional.  
 `POST /profile/avatar` **Auth** multipart form: `avatar` (jpg/png/webp, max 2MB). Returns full user with `avatar` URL.  
 `DELETE /profile/avatar` **Auth** — remove photo  
 `PUT /profile/fcm-token` **Auth** `{ "fcm_token": "..." }` — Enable push notifications  
