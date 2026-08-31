@@ -116,7 +116,7 @@
         <!-- Footer note -->
         <p class="text-center text-gray-600 text-xs mt-6">
             This panel is restricted to authorized administrators only.<br>
-            <a href="{{ url('/') }}" class="text-gray-500 hover:text-gray-400 underline transition-colors mt-1 inline-block">← Back to Fendo</a>
+            <a href="{{ url('/') }}" class="text-gray-500 hover:text-gray-400 underline transition-colors mt-1 inline-block">← Back to website</a>
         </p>
     </div>
 

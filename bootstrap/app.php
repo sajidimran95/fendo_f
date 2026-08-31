@@ -15,18 +15,10 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
-            'customer' => \App\Http\Middleware\CustomerMiddleware::class,
         ]);
 
-        $middleware->redirectGuestsTo(fn () => route('front.welcome'));
-        $middleware->redirectUsersTo(function () {
-            $user = auth()->user();
-            if ($user && $user->is_admin) {
-                return route('admin.dashboard');
-            }
-
-            return route('front.summary');
-        });
+        $middleware->redirectGuestsTo(fn () => route('admin.login'));
+        $middleware->redirectUsersTo(fn () => route('admin.dashboard'));
 
         // API: force JSON responses + security headers + active-user check
         $middleware->api(append: [
