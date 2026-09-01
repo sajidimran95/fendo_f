@@ -93,7 +93,17 @@ class User extends Authenticatable
             return null;
         }
 
-        return asset('storage/'.$this->avatar);
+        $path = ltrim(str_replace('\\', '/', (string) $this->avatar), '/');
+        if (str_starts_with($path, 'storage/')) {
+            $path = substr($path, strlen('storage/'));
+        }
+
+        return rtrim((string) config('app.url'), '/').'/media/'.$path;
+    }
+
+    public function isDemo(): bool
+    {
+        return $this->phone === '+8801712345678';
     }
 
     public function toApiArray(): array
@@ -111,6 +121,8 @@ class User extends Authenticatable
             'avatar' => $this->avatarUrl(),
             'notifications_enabled' => $this->notifications_enabled,
             'profile_completed' => $this->profile_completed,
+            'is_demo' => $this->isDemo(),
+            'contacts_count' => $this->contacts()->count(),
             'created_at' => $this->created_at?->toIso8601String(),
         ];
     }

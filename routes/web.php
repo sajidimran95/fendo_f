@@ -7,9 +7,11 @@ use App\Http\Controllers\Admin\FeedbackController;
 use App\Http\Controllers\Admin\ProfileController;
 use App\Http\Controllers\Admin\TransactionController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\MediaController;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'landing')->name('home');
+Route::get('media/{path}', [MediaController::class, 'show'])->where('path', '.*')->name('media');
 
 Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('login', [AuthController::class, 'showLogin'])->name('login');

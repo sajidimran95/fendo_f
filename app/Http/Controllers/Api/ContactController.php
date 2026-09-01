@@ -84,6 +84,9 @@ class ContactController extends Controller
             if (! $phone) {
                 continue;
             }
+            if (! $user->isDemo() && in_array($phone, ['+15551230001', '+15551230002', '+15551230003'], true)) {
+                continue;
+            }
 
             $linked = User::where('phone', $phone)->where('id', '!=', $user->id)->first();
 

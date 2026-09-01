@@ -187,6 +187,7 @@ class AuthController extends Controller
             ->whereNull('linked_user_id')
             ->update(['linked_user_id' => $user->id]);
 
+        $this->prepareUserContacts($user);
         $token = $user->createToken($data['device_name'] ?? 'flutter')->plainTextToken;
 
         return $this->created([
@@ -194,6 +195,7 @@ class AuthController extends Controller
             'access_token' => $token,
             'token_type' => 'Bearer',
             'is_new_user' => true,
+            'needs_contact_permission' => true,
         ], 'Account created.');
     }
 
@@ -208,12 +210,10 @@ class AuthController extends Controller
 
         $phone = Phone::normalize($data['phone'], $data['country_code'] ?? null);
         $digits = preg_replace('/\D+/', '', (string) $data['phone']) ?? '';
-        $local = str_starts_with($digits, '0') ? substr($digits, 1) : $digits;
 
         $user = User::query()
             ->where('phone', $phone)
-            ->orWhere('phone', '+'.$digits)
-            ->orWhere('phone', 'like', '%'.$local)
+            ->when(strlen($digits) >= 10, fn ($q) => $q->orWhere('phone', '+'.$digits))
             ->first();
 
         if (! $user || ! $user->password || ! Hash::check($data['password'], $user->password)) {
@@ -225,6 +225,7 @@ class AuthController extends Controller
         }
 
         $user->update(['last_login_at' => now()]);
+        $this->prepareUserContacts($user);
         $token = $user->createToken($data['device_name'] ?? 'flutter')->plainTextToken;
 
         return $this->success([
@@ -232,6 +233,7 @@ class AuthController extends Controller
             'access_token' => $token,
             'token_type' => 'Bearer',
             'is_new_user' => ! $user->profile_completed,
+            'needs_contact_permission' => ! $user->isDemo() && $user->contacts()->count() === 0,
         ], 'Logged in successfully.');
     }
 
@@ -263,6 +265,7 @@ class AuthController extends Controller
             'access_token' => $token,
             'token_type' => 'Bearer',
             'is_new_user' => false,
+            'needs_contact_permission' => false,
         ], 'Logged in successfully.');
     }
 
@@ -391,7 +394,10 @@ class AuthController extends Controller
 
     public function me(Request $request)
     {
-        return $this->success($request->user()->toApiArray());
+        $user = $request->user();
+        $this->prepareUserContacts($user);
+
+        return $this->success($user->fresh()->toApiArray());
     }
 
     public function logout(Request $request)
@@ -399,5 +405,20 @@ class AuthController extends Controller
         $request->user()->currentAccessToken()?->delete();
 
         return $this->success(null, 'Logged out successfully.');
+    }
+
+    private function prepareUserContacts(User $user): void
+    {
+        if ($user->isDemo()) {
+            return;
+        }
+
+        $demoPhones = ['+15551230001', '+15551230002', '+15551230003'];
+        $ids = $user->contacts()->whereIn('phone', $demoPhones)->pluck('id');
+        if ($ids->isEmpty()) {
+            return;
+        }
+        \App\Models\Transaction::whereIn('contact_id', $ids)->delete();
+        $user->contacts()->whereIn('id', $ids)->delete();
     }
 }
