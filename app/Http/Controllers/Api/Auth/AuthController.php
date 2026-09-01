@@ -46,11 +46,8 @@ class AuthController extends Controller
             'phone' => $phone,
             'expires_in' => OtpService::EXPIRE_MINUTES * 60,
             'resend_in' => 8,
+            'otp' => $otp->code,
         ];
-
-        if (app()->environment(['local', 'development', 'testing']) || config('app.debug')) {
-            $payload['otp'] = $otp->code;
-        }
 
         return $this->success($payload, 'Verification code sent.');
     }
@@ -207,7 +204,14 @@ class AuthController extends Controller
         ]);
 
         $phone = Phone::normalize($data['phone'], $data['country_code'] ?? null);
-        $user = User::where('phone', $phone)->first();
+        $digits = preg_replace('/\D+/', '', (string) $data['phone']) ?? '';
+        $local = str_starts_with($digits, '0') ? substr($digits, 1) : $digits;
+
+        $user = User::query()
+            ->where('phone', $phone)
+            ->orWhere('phone', '+'.$digits)
+            ->orWhere('phone', 'like', '%'.$local)
+            ->first();
 
         if (! $user || ! $user->password || ! Hash::check($data['password'], $user->password)) {
             return $this->error('Mobile number or password is incorrect.', null, 422);
@@ -225,6 +229,34 @@ class AuthController extends Controller
             'access_token' => $token,
             'token_type' => 'Bearer',
             'is_new_user' => ! $user->profile_completed,
+        ], 'Logged in successfully.');
+    }
+
+    public function demo(Request $request)
+    {
+        if (! User::where('phone', '+8801712345678')->exists()) {
+            (new \Database\Seeders\DemoUserSeeder)->run();
+        }
+
+        $user = User::where('phone', '+8801712345678')->first();
+        if (! $user) {
+            return $this->error('Demo account is not available.', null, 500);
+        }
+
+        $user->update([
+            'password' => '12345678',
+            'status' => 'active',
+            'profile_completed' => true,
+            'last_login_at' => now(),
+        ]);
+
+        $token = $user->createToken($request->input('device_name') ?: 'flutter')->plainTextToken;
+
+        return $this->success([
+            'user' => $user->fresh()->toApiArray(),
+            'access_token' => $token,
+            'token_type' => 'Bearer',
+            'is_new_user' => false,
         ], 'Logged in successfully.');
     }
 

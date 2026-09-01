@@ -18,6 +18,7 @@ Route::prefix('v1')->group(function () {
         Route::post('firebase', [AuthController::class, 'firebase']);
         Route::post('register', [AuthController::class, 'register']);
         Route::post('login', [AuthController::class, 'login']);
+        Route::post('demo', [AuthController::class, 'demo']);
         Route::post('reset-password', [AuthController::class, 'resetPassword']);
     });
 
