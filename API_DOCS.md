@@ -1,6 +1,8 @@
 # Fendo API — Flutter
-> Base URL: `http://fendo.test/api/v1`  
-> Local Laragon: `http://localhost/Fendo/public/api/v1`
+> **Local:** `http://fendo.test/api/v1` or `http://localhost/Fendo/public/api/v1`  
+> **Live:** `https://yourdomain.com/api/v1` (set when building the app)
+
+See **DEPLOY.md** for full server upload steps.
 
 All JSON. Protected routes need:
 

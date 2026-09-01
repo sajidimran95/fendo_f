@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\AdminAudit;
 use Illuminate\Http\Request;
 
 class UserController extends Controller
@@ -44,12 +45,28 @@ class UserController extends Controller
         $user->update(['status' => 'suspended']);
         $user->tokens()->delete();
 
+        AdminAudit::log('user.suspend', $user, "Suspended {$user->displayName()} ({$user->phone})");
+
         return back()->with('success', $user->displayName().' has been suspended.');
+    }
+
+    public function ban(User $user)
+    {
+        abort_if($user->is_admin, 403);
+        $user->update(['status' => 'banned']);
+        $user->tokens()->delete();
+
+        AdminAudit::log('user.ban', $user, "Banned {$user->displayName()} ({$user->phone})");
+
+        return back()->with('success', $user->displayName().' has been banned.');
     }
 
     public function restore(User $user)
     {
+        abort_if($user->is_admin, 403);
         $user->update(['status' => 'active']);
+
+        AdminAudit::log('user.restore', $user, "Restored {$user->displayName()} ({$user->phone})");
 
         return back()->with('success', $user->displayName().' has been restored.');
     }

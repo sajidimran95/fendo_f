@@ -65,7 +65,12 @@ class User extends Authenticatable
 
     public function isSuspended(): bool
     {
-        return $this->status === 'suspended';
+        return in_array($this->status, ['suspended', 'banned'], true);
+    }
+
+    public function isBanned(): bool
+    {
+        return $this->status === 'banned';
     }
 
     public function displayName(): string

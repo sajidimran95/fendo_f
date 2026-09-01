@@ -14,10 +14,13 @@ class EnsureUserIsActive
 
         if ($user && ! $user->isActive()) {
             $user->tokens()->delete();
+            $message = $user->isBanned()
+                ? 'Your account has been banned. Contact support.'
+                : 'Your account has been suspended. Contact support.';
 
             return response()->json([
                 'success' => false,
-                'message' => 'Your account has been suspended. Contact support.',
+                'message' => $message,
                 'errors' => null,
             ], 403);
         }

@@ -46,8 +46,11 @@ class AuthController extends Controller
             'phone' => $phone,
             'expires_in' => OtpService::EXPIRE_MINUTES * 60,
             'resend_in' => 8,
-            'otp' => $otp->code,
         ];
+
+        if (config('app.debug') || app()->environment(['local', 'development', 'testing'])) {
+            $payload['otp'] = $otp->code;
+        }
 
         return $this->success($payload, 'Verification code sent.');
     }
@@ -234,6 +237,9 @@ class AuthController extends Controller
 
     public function demo(Request $request)
     {
+        if (! config('app.demo_enabled')) {
+            return $this->error('Demo login is disabled.', null, 404);
+        }
         if (! User::where('phone', '+8801712345678')->exists()) {
             (new \Database\Seeders\DemoUserSeeder)->run();
         }

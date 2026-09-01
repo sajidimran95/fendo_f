@@ -22,7 +22,7 @@ class DashboardController extends Controller
             'loan_volume' => (float) Transaction::whereIn('type', ['lend', 'borrow'])->sum('amount'),
             'open_balance' => (float) Contact::selectRaw('SUM(ABS(balance)) as total')->value('total'),
             'feedback' => Feedback::count(),
-            'suspended_users' => User::where('status', 'suspended')->count(),
+            'suspended_users' => User::whereIn('status', ['suspended', 'banned'])->count(),
         ];
 
         $growthChart = collect(range(29, 0))->map(function ($daysAgo) {

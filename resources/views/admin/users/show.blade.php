@@ -11,6 +11,10 @@
             @csrf
             <button class="bg-orange-500/20 text-orange-300 text-sm px-4 py-2 rounded-xl">Suspend</button>
         </form>
+        <form method="POST" action="{{ route('admin.users.ban', $user) }}" onsubmit="return confirm('Ban this user?')">
+            @csrf
+            <button class="bg-red-500/20 text-red-300 text-sm px-4 py-2 rounded-xl">Ban</button>
+        </form>
     @else
         <form method="POST" action="{{ route('admin.users.restore', $user) }}">
             @csrf

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Services\AdminAudit;
 use App\Services\AvatarService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rules\Password;
@@ -26,12 +27,16 @@ class ProfileController extends Controller
 
         $this->avatars->store($request->user(), $request->file('avatar'));
 
+        AdminAudit::log('admin.avatar_updated', $request->user(), 'Admin profile photo updated');
+
         return back()->with('success', 'Profile photo updated.');
     }
 
     public function deleteAvatar(Request $request)
     {
         $this->avatars->remove($request->user());
+
+        AdminAudit::log('admin.avatar_removed', $request->user(), 'Admin profile photo removed');
 
         return back()->with('success', 'Profile photo removed.');
     }
@@ -46,6 +51,8 @@ class ProfileController extends Controller
         $request->user()->update([
             'password' => $data['password'],
         ]);
+
+        AdminAudit::log('admin.password_changed', $request->user(), 'Admin password changed');
 
         return back()->with('success', 'Password updated.');
     }

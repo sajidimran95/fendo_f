@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Services\AdminAudit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -51,11 +52,18 @@ class AuthController extends Controller
         $request->session()->regenerate();
         $user->update(['last_login_at' => now()]);
 
+        AdminAudit::log('admin.login', $user, "Admin signed in: {$user->email}");
+
         return redirect()->intended(route('admin.dashboard'));
     }
 
     public function logout(Request $request)
     {
+        $user = Auth::user();
+        if ($user) {
+            AdminAudit::log('admin.logout', $user, "Admin signed out: {$user->email}");
+        }
+
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();

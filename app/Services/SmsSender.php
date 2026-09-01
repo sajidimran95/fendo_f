@@ -13,7 +13,10 @@ class SmsSender
 
         $message = "Your Fendo verification code is {$code}";
 
-        $this->sendToAndroidEmulator($message);
+        if (app()->environment(['local', 'development', 'testing'])) {
+            $this->sendToAndroidEmulator($message);
+        }
+
         $this->sendViaHttpGateway($phone, $message);
     }
 
