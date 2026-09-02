@@ -72,7 +72,7 @@ class ContactController extends Controller
         $data = $request->validate([
             'contacts' => ['required', 'array', 'max:1000'],
             'contacts.*.name' => ['required', 'string', 'max:120'],
-            'contacts.*.phone' => ['nullable', 'string', 'max:20'],
+            'contacts.*.phone' => ['nullable', 'string', 'max:32'],
             'contacts.*.country_code' => ['nullable', 'string', 'max:8'],
         ]);
 
