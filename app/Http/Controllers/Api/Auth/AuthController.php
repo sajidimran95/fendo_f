@@ -299,6 +299,29 @@ class AuthController extends Controller
         return $this->success(null, 'Password updated. You can sign in now.');
     }
 
+    public function confirmOtp(Request $request)
+    {
+        $data = $request->validate([
+            'phone' => ['nullable', 'string', 'min:7', 'max:20'],
+            'country_code' => ['nullable', 'string', 'max:8'],
+            'otp' => ['nullable', 'string', 'max:8'],
+            'id_token' => ['nullable', 'string'],
+        ]);
+
+        $user = $request->user();
+        $phone = $user
+            ? Phone::normalize($user->phone)
+            : Phone::normalize($data['phone'] ?? '', $data['country_code'] ?? null);
+
+        if (! $phone) {
+            return $this->error('No mobile number found for this account.', null, 422);
+        }
+
+        $this->assertPhoneVerified($phone, $data['country_code'] ?? ($user?->country_code), $data['id_token'] ?? null, $data['otp'] ?? null, 'reset');
+
+        return $this->success(['verified' => true], 'Phone verified.');
+    }
+
     private function assertPhoneVerified(string $phone, ?string $countryCode, ?string $idToken, ?string $otp, string $purpose): void
     {
         $hasToken = is_string($idToken) && $idToken !== '';

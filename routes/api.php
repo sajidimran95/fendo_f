@@ -24,6 +24,7 @@ Route::prefix('v1')->group(function () {
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('auth/complete-profile', [AuthController::class, 'completeProfile']);
+        Route::post('auth/confirm-otp', [AuthController::class, 'confirmOtp']);
         Route::get('auth/me', [AuthController::class, 'me']);
         Route::post('auth/logout', [AuthController::class, 'logout']);
 
