@@ -137,7 +137,10 @@
     <footer class="border-t border-slate-100">
         <div class="max-w-6xl mx-auto px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-slate-500">
             <span class="font-semibold text-slate-700">fendo</span>
-            <span>Track loans between friends.</span>
+            <div class="flex items-center gap-4">
+                <a href="/privacy" class="hover:text-fendo">Privacy Policy</a>
+                <span>Track loans between friends.</span>
+            </div>
         </div>
     </footer>
 </body>

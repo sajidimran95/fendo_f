@@ -11,6 +11,7 @@ use App\Http\Controllers\MediaController;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'landing')->name('home');
+Route::view('/privacy', 'privacy')->name('privacy');
 Route::get('media/{path}', [MediaController::class, 'show'])->where('path', '.*')->name('media');
 
 Route::prefix('admin')->name('admin.')->group(function () {
